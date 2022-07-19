@@ -30,14 +30,14 @@ app.get("/video/:value", async function(req, res){
 
 export async function ytdlvideo(songurl: string, songid: string, songname: string, req, res) {
     try {
-        fs.statSync(path.join(__dirname, `./tmp/${songid}.mp4`));
+        fs.statSync(path.join(__dirname, `../tmp/${songid}.mp4`));
         return;
     } catch (error) {
         if (error.code === 'ENOENT') {
             ytdl(songurl, {
                 filter: (format) => format.container === 'mp4'
             })
-            .pipe(fs.createWriteStream(path.join(__dirname, `./tmp/${songid}.mp4`)))
+            .pipe(fs.createWriteStream(path.join(__dirname, `../tmp/${songid}.mp4`)))
             return;
         };
     };
@@ -45,14 +45,14 @@ export async function ytdlvideo(songurl: string, songid: string, songname: strin
 
 export async function ytdlmusic(songurl: string, songid: string, songname: string, req, res) {
     try {
-        fs.statSync(path.join(__dirname, `./tmp/${songid}.mp3`));
+        fs.statSync(path.join(__dirname, `../tmp/${songid}.mp3`));
         return;
     } catch (error) {
         if (error.code === 'ENOENT') {
             ytdl(songurl, {
                 filter: 'audioonly'
             })
-            .pipe(fs.createWriteStream(path.join(__dirname, `./tmp/${songid}.mp3`)))
+            .pipe(fs.createWriteStream(path.join(__dirname, `../tmp/${songid}.mp3`)))
             return;
         };
     };
@@ -60,21 +60,21 @@ export async function ytdlmusic(songurl: string, songid: string, songname: strin
 
 export async function sendvideo(songid: string, songname: string, req, res): Promise<void> {
     await setTimeout(1500);
-    await res.sendFile(path.join(__dirname, `./tmp/${songid}.mp4`));
+    await res.sendFile(path.join(__dirname, `../tmp/${songid}.mp4`));
     await setTimeout(1800000);
-    await fs.remove(path.join(__dirname, `./tmp/${songid}.mp4`))
+    await fs.remove(path.join(__dirname, `../tmp/${songid}.mp4`))
 };
 
 export async function sendmusic(songid: string, songname: string, req, res): Promise<void> {
     await setTimeout(1500);
-    await res.sendFile(path.join(__dirname, `./tmp/${songid}.mp3`));
+    await res.sendFile(path.join(__dirname, `../tmp/${songid}.mp3`));
     await setTimeout(1800000);
-    await fs.remove(path.join(__dirname, `./tmp/${songid}.mp3`))
+    await fs.remove(path.join(__dirname, `../tmp/${songid}.mp3`))
 };
 
 const port = process.env.PORT || 8000;
 app.listen(port, () => {
-    fs.emptyDir(path.join(__dirname, `./tmp`));
+    fs.emptyDir(path.join(__dirname, `../tmp`));
     console.log(`done => http://localhost:${port}`);
 });
 export default app;
