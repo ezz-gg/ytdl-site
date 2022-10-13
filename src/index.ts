@@ -132,6 +132,8 @@ async function ytdlvideo(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
+  res.setHeader("content-type", "video/mp4");
+
   ytdl(songurl, {
     quality: "highestvideo",
     filter: "videoandaudio",
@@ -145,6 +147,8 @@ async function ytdlmusic(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
+  res.setHeader("content-type", "audio/mpeg");
+
   ytdl(songurl, {
     quality: "highestaudio",
     filter: "audioonly",
