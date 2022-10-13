@@ -1,25 +1,23 @@
 {
-	"compilerOptions": {
-		"target": "esnext",
-		"module": "commonjs",
-		"lib": [
-			"es2015",
-			"es2016",
-			"es2017",
-			"esnext"
-		],
-		"allowJs": false,
-		"checkJs": false,
-		"declaration": false,
-		"declarationMap": false,
-		"sourceMap": false,
-		"outDir": "./build",
-		"rootDir": "./src",
-		"removeComments": false,
-		"strict": false,
-		"moduleResolution": "node",
-		"esModuleInterop": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true
-	}
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./build",
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+  },
+  "ts-node": {
+    "esm": true
+  },
 }
