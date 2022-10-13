@@ -162,30 +162,16 @@ async function ytdlvideo_dl(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
-  let data: any = [];
+  res.setHeader("content-type", "video/mp4");
+  res.setHeader(
+    "content-disposition",
+    `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
+  );
 
   ytdl(songurl, {
     quality: "highestvideo",
     filter: "videoandaudio",
-  })
-    .on("data", (chunk: any) => {
-      data.push(chunk);
-    })
-    .on("end", () => {
-      let buffer: Buffer | null = Buffer.concat(data);
-
-      res.setHeader("content-type", "video/mp4");
-      res.setHeader(
-        "content-disposition",
-        `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
-      );
-      res.setHeader("content-length", buffer.length);
-
-      res.send(buffer);
-
-      data = null;
-      buffer = null;
-    });
+  }).pipe(res);
 }
 
 async function ytdlmusic_dl(
@@ -195,30 +181,16 @@ async function ytdlmusic_dl(
   req: express.Request,
   res: express.Response
 ): Promise<void> {
-  let data: any = [];
+  res.setHeader("content-type", "audio/mpeg");
+  res.setHeader(
+    "content-disposition",
+    `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
+  );
 
   ytdl(songurl, {
     quality: "highestaudio",
     filter: "audioonly",
-  })
-    .on("data", (chunk: any) => {
-      data.push(chunk);
-    })
-    .on("end", () => {
-      let buffer: Buffer | null = Buffer.concat(data);
-
-      res.setHeader("content-type", "audio/mpeg");
-      res.setHeader(
-        "content-disposition",
-        `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
-      );
-      res.setHeader("content-length", buffer.length);
-
-      res.send(buffer);
-
-      data = null;
-      buffer = null;
-    });
+  }).pipe(res);
 }
 
 const port = Number(process.env.PORT) || 25252;
