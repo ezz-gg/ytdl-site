@@ -2,7 +2,7 @@
   "name": "yt",
   "version": "1.0.0",
   "description": "",
-  "main": "build/index.cjs",
+  "main": "build/index.js",
   "scripts": {
     "start": "tsx src/index.ts"
   },
