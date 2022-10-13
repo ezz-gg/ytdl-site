@@ -1,8 +1,19 @@
-# [https://ytdlol.netlify.app](https://ytdlol.netlify.app)の中身
-Discordでyotunbe動画のプレビューが出せるWEBサイト
+## YtdlApi(?)
 
-## 機能
+## DemoSite(普通に使えるお)：https://ytdlol.nerusaba.net/
 
-### /video/曲名orVideoID 動画です、はい
+## ApiPaths
 
-### /music/曲名orVideoID 音単体です、はい (こっちはdiscordでプレビュされません)
+### <title> = "好きな曲";
+
+### /<title>.mp4
+
+### /<title>.mp3
+
+### /video/<title>
+
+### /music/<title>
+
+### /dl/video/<title>
+
+### /dl/music/<title>
