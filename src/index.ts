@@ -175,6 +175,9 @@ async function fileDeleteTimerLoop() {
         await Deno.remove(
           new URL("./data/" + fileDeleteTimer[i].fileName, import.meta.url)
         );
+        await Deno.remove(
+          new URL("./data/" + fileDeleteTimer[i].titleName, import.meta.url)
+        );
       } else {
       }
 
