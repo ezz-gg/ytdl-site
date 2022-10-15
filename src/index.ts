@@ -1,14 +1,8 @@
-import {
-  Application,
-  Context,
-  send,
-} from "https://deno.land/x/oak@v11.1.0/mod.ts";
+import { Application, Context } from "https://deno.land/x/oak@v11.1.0/mod.ts";
 import staticFiles from "https://deno.land/x/static_files@1.1.6/mod.ts";
 import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
-import url from "https://deno.land/std@0.159.0/node/url.ts";
 import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
-import { rmdir } from "https://deno.land/std@0.137.0/node/fs.ts?s=rmdir";
 
 let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
   { fileName: "start", expireDate: Date.now() },
@@ -16,24 +10,20 @@ let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
 
 const app = new Application();
 
-const kkPath = url.fileURLToPath(new URL(".", import.meta.url));
-
-app.use(staticFiles("data"));
+app.use(
+  staticFiles("src/data", {
+    prefix: "/data",
+    redirect: true,
+  })
+);
 
 app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
   const path = _ctx.request.url.pathname;
 
+  if (path.startsWith("/data/")) return;
+
   if (path === "/")
     return (_ctx.response.body = `Hello\n/<title>.mp4\n/<title>.mp3`);
-
-  if (path.startsWith("/data/"))
-    return await send(_ctx, _ctx.request.url.pathname.slice(6), {
-      root: kkPath + "data/",
-      contentTypes: {
-        ".mp4": "video/mp4",
-        ".mp3": "audio/mpeg",
-      },
-    });
 
   const title = path.slice(1, -4);
 
@@ -42,19 +32,9 @@ app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
   if (!song) return (_ctx.response.body = "検索結果がありません");
 
   if (path.endsWith(".mp4"))
-    return await ytdlVideo(
-      song.url || "",
-      song.id || "",
-      song.title || "",
-      _ctx
-    );
+    return await ytdlVideo(song.url || "", song.id || "", _ctx);
   if (path.endsWith(".mp3"))
-    return await ytdlMusic(
-      song.url || "",
-      song.id || "",
-      song.title || "",
-      _ctx
-    );
+    return await ytdlMusic(song.url || "", song.id || "", _ctx);
 
   return (_ctx.response.body = "何かがおかしいんだお");
 });
@@ -62,7 +42,6 @@ app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
 async function ytdlVideo(
   songurl: string,
   songid: string,
-  songname: string,
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp4";
@@ -98,7 +77,6 @@ async function ytdlVideo(
 async function ytdlMusic(
   songurl: string,
   songid: string,
-  songname: string,
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp3";
@@ -184,7 +162,7 @@ for await (const i of Deno.readDir(new URL("./data", import.meta.url))) {
   await Deno.remove(new URL("./data/" + i.name, import.meta.url));
 }
 
-const port = Number(Deno.env.get("PORT")) || 25252;
+const port = Number(Deno.env.get("PORT")) || 49152;
 
 console.log("ready http://0.0.0.0:" + port + "/");
 
