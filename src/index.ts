@@ -181,7 +181,7 @@ async function fileDeleteTimerLoop() {
 fileDeleteTimerLoop();
 
 for await (const i of Deno.readDir(new URL("./data", import.meta.url))) {
-  await Deno.remove(new URL("./data/" + i.name, kkPath));
+  await Deno.remove(new URL("./data/" + i.name, import.meta.url));
 }
 
 const port = Number(Deno.env.get("PORT")) || 25252;
