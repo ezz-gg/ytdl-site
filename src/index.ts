@@ -3,6 +3,7 @@ import {
   Context,
   send,
 } from "https://deno.land/x/oak@v11.1.0/mod.ts";
+import staticFiles from "https://deno.land/x/static_files@1.1.6/mod.ts";
 import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
 import url from "https://deno.land/std@0.159.0/node/url.ts";
@@ -15,6 +16,8 @@ let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
 const app = new Application();
 
 const kkPath = url.fileURLToPath(new URL(".", import.meta.url));
+
+app.use(staticFiles("data"));
 
 app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
   const path = _ctx.request.url.pathname;
