@@ -8,6 +8,7 @@ import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
 import url from "https://deno.land/std@0.159.0/node/url.ts";
 import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
+import { rmdirSync } from "https://deno.land/std@0.137.0/node/fs.ts?s=rmdir";
 
 let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
   { fileName: "start", expireDate: Date.now() },
@@ -181,7 +182,7 @@ fileDeleteTimerLoop();
 
 const port = Number(Deno.env.get("PORT")) || 25252;
 
-await Deno.remove(new URL("./data", import.meta.url));
+rmdirSync(new URL("./data", import.meta.url));
 await Deno.mkdir(new URL("./data", import.meta.url));
 
 console.log("ready http://0.0.0.0:" + port + "/");
