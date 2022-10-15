@@ -181,5 +181,9 @@ fileDeleteTimerLoop();
 
 const port = Number(Deno.env.get("PORT")) || 25252;
 
+await Deno.remove(new URL("./data", import.meta.url));
+await Deno.mkdir(new URL("./data", import.meta.url));
+
 console.log("ready http://0.0.0.0:" + port + "/");
+
 await app.listen({ port: port });
