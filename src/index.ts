@@ -4,9 +4,9 @@ import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
 import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
 
-let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
-  { fileName: "start", expireDate: Date.now() },
-];
+let fileDeleteTimer: [
+  { fileName: string; titleName: string; expireDate: number }
+] = [{ fileName: "start", titleName: "start", expireDate: Date.now() }];
 
 const app = new Application();
 
@@ -32,24 +32,38 @@ app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
   if (!song) return (_ctx.response.body = "検索結果がありません");
 
   if (path.endsWith(".mp4"))
-    return await ytdlVideo(song.url || "", song.id || "", _ctx);
+    return await ytdlVideo(
+      song.url || "",
+      song.title || "",
+      song.id || "",
+      _ctx
+    );
   if (path.endsWith(".mp3"))
-    return await ytdlMusic(song.url || "", song.id || "", _ctx);
+    return await ytdlMusic(
+      song.url || "",
+      song.title || "",
+      song.id || "",
+      _ctx
+    );
 
   return (_ctx.response.body = "何かがおかしいんだお");
 });
 
 async function ytdlVideo(
   songurl: string,
+  songtitle: string,
   songid: string,
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp4";
+  const titleName = songtitle.replaceAll(/\.|\,|\/|\\/g, "") + ".mp4";
 
   if (await exists(fileName)) {
-    return _ctx.response.redirect(
-      new URL("./data/" + fileName, _ctx.request.url.origin)
+    _ctx.response.redirect(
+      new URL("./data/" + titleName, _ctx.request.url.origin)
     );
+
+    return await fileDeleteTimerRegister(fileName, titleName);
   }
 
   const yt = await ytdl(songurl, {
@@ -70,22 +84,33 @@ async function ytdlVideo(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  return _ctx.response.redirect(
-    new URL("./data/" + fileName, _ctx.request.url.origin)
+  await Deno.symlink(
+    new URL("./data/" + fileName, import.meta.url),
+    new URL("./data/" + titleName, import.meta.url),
+    { type: "file" }
   );
+
+  _ctx.response.redirect(
+    new URL("./data/" + titleName, _ctx.request.url.origin)
+  );
+
+  return await fileDeleteTimerRegister(fileName, titleName);
 }
 async function ytdlMusic(
   songurl: string,
+  songtitle: string,
   songid: string,
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp3";
+  const titleName = songtitle.replaceAll(/\.|\,|\/|\\/g, "") + ".mp3";
 
   if (await exists(fileName)) {
     _ctx.response.redirect(
-      new URL("./data/" + fileName, _ctx.request.url.origin)
+      new URL("./data/" + titleName, _ctx.request.url.origin)
     );
-    return await fileDeleteTimerRegister(fileName);
+
+    return await fileDeleteTimerRegister(fileName, titleName);
   }
 
   const yt = await ytdl(songurl, {
@@ -106,10 +131,17 @@ async function ytdlMusic(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  _ctx.response.redirect(
-    new URL("./data/" + fileName, _ctx.request.url.origin)
+  await Deno.symlink(
+    new URL("./data/" + fileName, import.meta.url),
+    new URL("./data/" + titleName, import.meta.url),
+    { type: "file" }
   );
-  return await fileDeleteTimerRegister(fileName);
+
+  _ctx.response.redirect(
+    new URL("./data/" + titleName, _ctx.request.url.origin)
+  );
+
+  return await fileDeleteTimerRegister(fileName, titleName);
 }
 
 async function exists(fileName: string) {
@@ -123,15 +155,16 @@ async function exists(fileName: string) {
   }
 }
 
-async function fileDeleteTimerRegister(fileName: string) {
+async function fileDeleteTimerRegister(fileName: string, titleName: string) {
   for (const i in fileDeleteTimer) {
     if (fileDeleteTimer[i].fileName === fileName)
-      return (fileDeleteTimer[i].expireDate = Date.now() + 60 * 30);
+      return (fileDeleteTimer[i].expireDate = Date.now() + 1000 * 60 * 30);
   }
 
   fileDeleteTimer.push({
     fileName: fileName,
-    expireDate: Date.now() + 60 * 30,
+    titleName: titleName,
+    expireDate: Date.now() + 1000 * 60 * 30,
   });
 }
 
