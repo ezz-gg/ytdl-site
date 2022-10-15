@@ -1,200 +1,170 @@
-import ytdl from "ytdl-core";
-import ytsr from "@distube/ytsr";
-import express from "express";
+import {
+  Application,
+  Context,
+  send,
+} from "https://deno.land/x/oak@v11.1.0/mod.ts";
+import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
+import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
+import url from "https://deno.land/std@0.159.0/node/url.ts";
+import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
 
-process.on("uncaughtException", async (err): Promise<void> => {
-  console.error(err);
+let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
+  { fileName: "start", expireDate: Date.now() },
+];
+
+const app = new Application();
+
+const kkPath = url.fileURLToPath(new URL(".", import.meta.url));
+
+app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
+  const path = _ctx.request.url.pathname;
+
+  if (path.startsWith("/data/"))
+    return await send(_ctx, _ctx.request.url.pathname.slice(6), {
+      root: kkPath + "data/",
+      contentTypes: {
+        ".mp4": "video/mp4",
+        ".mp3": "audio/mpeg",
+      },
+    });
+
+  const title = path.slice(1, -4);
+
+  const song = await ytsr.searchOne(decodeURI(title), "video", false);
+
+  if (!(song.url && song.id && song.title))
+    return (_ctx.response.body = "検索結果がありません");
+
+  if (path.endsWith(".mp4"))
+    return await ytdlVideo(song.url, song.id, song.title, _ctx);
+  if (path.endsWith(".mp3"))
+    return await ytdlMusic(song.url, song.id, song.title, _ctx);
+
+  return (_ctx.response.body = "何かがおかしいんだお");
 });
 
-const app = express();
+async function ytdlVideo(
+  songurl: string,
+  songid: string,
+  songname: string,
+  _ctx: Context<Record<string, any>, Record<string, any>>
+) {
+  const fileName = songid + ".mp4";
 
-app.get("/", async (req: express.Request, res: express.Response) => {
-  console.log(`"GET / HTTP/${req.httpVersion}"`);
-
-  res.send(
-    "Hello\n/video 映像と音をバッファーで\n/music 音だけをバッファーで\n/dl/video 映像と音をファイルとしてダウンロード\n/dl/music 音だけをファイルとしてダウンロード"
-  );
-});
-app.get("/:value", async (req: express.Request, res: express.Response) => {
-  const value = decodeURI(req.params.value);
-
-  try {
-    if (value.endsWith(".mp4")) {
-      const title = value.slice(0, -4);
-      const song = await search(title);
-
-      console.log(
-        `"GET /${value} HTTP/${req.httpVersion}" SongName：${song.name}`
-      );
-
-      await ytdlvideo(song.url, song.id, song.name, req, res);
-    } else if (value.endsWith(".mp3")) {
-      const title = value.slice(0, -4);
-      const song = await search(title);
-
-      console.log(
-        `"GET /${value} HTTP/${req.httpVersion}" SongName：${song.name}`
-      );
-
-      await ytdlmusic(song.url, song.id, song.name, req, res);
-    }
-  } catch (error: any) {
-    res.send("検索結果がありません");
-  }
-});
-
-app.get(
-  "/video/:value",
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const song = await search(decodeURI(req.params.value));
-      console.log(
-        `"GET /video/${decodeURI(req.params.value)} HTTP/${
-          req.httpVersion
-        }" SongName：${song.name}`
-      );
-      await ytdlvideo(song.url, song.id, song.name, req, res);
-    } catch (error: any) {
-      res.send("検索結果がありません");
-    }
-  }
-);
-
-app.get(
-  "/music/:value",
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const song = await search(decodeURI(req.params.value));
-      console.log(
-        `"GET /music/${decodeURI(req.params.value)} HTTP/${
-          req.httpVersion
-        }" SongName：${song.name}`
-      );
-      await ytdlmusic(song.url, song.id, song.name, req, res);
-    } catch (error: any) {
-      res.send("検索結果がありません");
-    }
-  }
-);
-
-app.get(
-  "/dl/video/:value",
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const song = await search(decodeURI(req.params.value));
-      console.log(
-        `"GET /dl/video/${decodeURI(req.params.value)} HTTP/${
-          req.httpVersion
-        }" SongName：${song.name}`
-      );
-      await ytdlvideo_dl(song.url, song.id, song.name, req, res);
-    } catch (error: any) {
-      res.send("検索結果がありません");
-    }
-  }
-);
-
-app.get(
-  "/dl/music/:value",
-  async (req: express.Request, res: express.Response) => {
-    try {
-      const song = await search(decodeURI(req.params.value));
-      console.log(
-        `"GET /dl/music/${decodeURI(req.params.value)} HTTP/${
-          req.httpVersion
-        }" SongName：${song.name}`
-      );
-      await ytdlmusic_dl(song.url, song.id, song.name, req, res);
-    } catch (error: any) {
-      res.send("検索結果がありません");
-    }
-  }
-);
-
-async function search(value: string): Promise<any> {
-  try {
-    const result = await ytsr(value, { safeSearch: false, limit: 1 }).then(
-      async (result): Promise<any> => {
-        let song = result.items[0];
-        return song;
-      }
+  if (await exists(fileName)) {
+    return _ctx.response.redirect(
+      new URL("./data/" + fileName, _ctx.request.url.origin)
     );
-    return result;
-  } catch (error: any) {
-    return null;
+  }
+
+  const yt = await ytdl(songurl, {
+    quality: "highest",
+    filter: "videoandaudio",
+  });
+
+  const chunks: Uint8Array[] = [];
+
+  for await (const chunk of yt) {
+    chunks.push(chunk);
+  }
+
+  const blob = new Blob(chunks);
+
+  const ok = await Deno.writeFile(
+    new URL("./data/" + fileName, import.meta.url),
+    new Uint8Array(await blob.arrayBuffer())
+  );
+
+  return _ctx.response.redirect(
+    new URL("./data/" + fileName, _ctx.request.url.origin)
+  );
+}
+async function ytdlMusic(
+  songurl: string,
+  songid: string,
+  songname: string,
+  _ctx: Context<Record<string, any>, Record<string, any>>
+) {
+  const fileName = songid + ".mp3";
+
+  if (await exists(fileName)) {
+    _ctx.response.redirect(
+      new URL("./data/" + fileName, _ctx.request.url.origin)
+    );
+    return await fileDeleteTimerRegister(fileName);
+  }
+
+  const yt = await ytdl(songurl, {
+    quality: "highest",
+    filter: "audioonly",
+  });
+
+  const chunks: Uint8Array[] = [];
+
+  for await (const chunk of yt) {
+    chunks.push(chunk);
+  }
+
+  const blob = new Blob(chunks);
+
+  const ok = await Deno.writeFile(
+    new URL("./data/" + fileName, import.meta.url),
+    new Uint8Array(await blob.arrayBuffer())
+  );
+
+  _ctx.response.redirect(
+    new URL("./data/" + fileName, _ctx.request.url.origin)
+  );
+  return await fileDeleteTimerRegister(fileName);
+}
+
+async function exists(fileName: string) {
+  try {
+    const file = await Deno.stat(
+      new URL("./data/" + fileName, import.meta.url)
+    );
+    return file.isFile;
+  } catch {
+    return false;
   }
 }
 
-async function ytdlvideo(
-  songurl: string,
-  songid: string,
-  songname: string,
-  req: express.Request,
-  res: express.Response
-): Promise<void> {
-  res.setHeader("content-type", "video/mp4");
+async function fileDeleteTimerRegister(fileName: string) {
+  for (const i in fileDeleteTimer) {
+    if (fileDeleteTimer[i].fileName === fileName)
+      return (fileDeleteTimer[i].expireDate = Date.now() + 60 * 30);
+  }
 
-  ytdl(songurl, {
-    quality: "highestvideo",
-    filter: "videoandaudio",
-  }).pipe(res);
+  fileDeleteTimer.push({
+    fileName: fileName,
+    expireDate: Date.now() + 60 * 30,
+  });
 }
 
-async function ytdlmusic(
-  songurl: string,
-  songid: string,
-  songname: string,
-  req: express.Request,
-  res: express.Response
-): Promise<void> {
-  res.setHeader("content-type", "audio/mpeg");
+async function fileDeleteTimerLoop() {
+  for (const i in fileDeleteTimer) {
+    if (fileDeleteTimer[i].expireDate <= Date.now()) {
+      if (fileDeleteTimer[i].fileName !== "start") {
+        await Deno.remove(
+          new URL("./data/" + fileDeleteTimer[i].fileName, import.meta.url)
+        );
+      } else {
+      }
 
-  ytdl(songurl, {
-    quality: "highestaudio",
-    filter: "audioonly",
-  }).pipe(res);
+      delete fileDeleteTimer[i];
+    }
+  }
+
+  fileDeleteTimer.filter((j) => !(typeof j === "undefined"));
+
+  await sleep(0.025);
+
+  await fileDeleteTimerLoop();
 }
 
-async function ytdlvideo_dl(
-  songurl: string,
-  songid: string,
-  songname: string,
-  req: express.Request,
-  res: express.Response
-): Promise<void> {
-  res.setHeader("content-type", "video/mp4");
-  res.setHeader(
-    "content-disposition",
-    `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
-  );
+fileDeleteTimerLoop();
 
-  ytdl(songurl, {
-    quality: "highestvideo",
-    filter: "videoandaudio",
-  }).pipe(res);
-}
+const port = Number(Deno.env.get("PORT")) || 25252;
 
-async function ytdlmusic_dl(
-  songurl: string,
-  songid: string,
-  songname: string,
-  req: express.Request,
-  res: express.Response
-): Promise<void> {
-  res.setHeader("content-type", "audio/mpeg");
-  res.setHeader(
-    "content-disposition",
-    `attachment; filename="${songname.replaceAll(/.|,|\/|\\/gi, "")}"`
-  );
-
-  ytdl(songurl, {
-    quality: "highestaudio",
-    filter: "audioonly",
-  }).pipe(res);
-}
-
-const port = Number(process.env.PORT) || 25252;
-
-app.listen(port, "0.0.0.0", async () => {
-  console.log(`ready => http://localhost:${port}/`);
-});
+await app.listen({ port: port });
+console.log("ready");
