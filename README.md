@@ -9,11 +9,3 @@
 ### /<title>.mp4
 
 ### /<title>.mp3
-
-### /video/<title>
-
-### /music/<title>
-
-### /dl/video/<title>
-
-### /dl/music/<title>
