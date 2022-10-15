@@ -19,6 +19,9 @@ const kkPath = url.fileURLToPath(new URL(".", import.meta.url));
 app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
   const path = _ctx.request.url.pathname;
 
+  if (path === "/")
+    return (_ctx.response.body = `Hello\n/<title>.mp4\n/<title>.mp3`);
+
   if (path.startsWith("/data/"))
     return await send(_ctx, _ctx.request.url.pathname.slice(6), {
       root: kkPath + "data/",
@@ -32,13 +35,22 @@ app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
 
   const song = await ytsr.searchOne(decodeURI(title), "video", false);
 
-  if (!(song.url && song.id && song.title))
-    return (_ctx.response.body = "検索結果がありません");
+  if (!song) return (_ctx.response.body = "検索結果がありません");
 
   if (path.endsWith(".mp4"))
-    return await ytdlVideo(song.url, song.id, song.title, _ctx);
+    return await ytdlVideo(
+      song.url || "",
+      song.id || "",
+      song.title || "",
+      _ctx
+    );
   if (path.endsWith(".mp3"))
-    return await ytdlMusic(song.url, song.id, song.title, _ctx);
+    return await ytdlMusic(
+      song.url || "",
+      song.id || "",
+      song.title || "",
+      _ctx
+    );
 
   return (_ctx.response.body = "何かがおかしいんだお");
 });
@@ -166,5 +178,5 @@ fileDeleteTimerLoop();
 
 const port = Number(Deno.env.get("PORT")) || 25252;
 
+console.log("ready http://0.0.0.0:" + port + "/");
 await app.listen({ port: port });
-console.log("ready");
