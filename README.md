@@ -10,6 +10,8 @@
 
 ### /<title>.mp3
 
-## Self Host Setup
+## Selfhost setup
 
-### https://deno.land/
+### 1 Deno runtime install https://deno.land/
+
+### 2 Run `deno run --allow-net --allow-env --allow-read --allow-write src/index.ts`
