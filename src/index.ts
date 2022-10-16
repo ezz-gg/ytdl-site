@@ -4,9 +4,9 @@ import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
 import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
 
-let fileDeleteTimer: [
-  { fileName: string; titleName: string; expireDate: number }
-] = [{ fileName: "start", titleName: "start", expireDate: Date.now() }];
+let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
+  { fileName: "start", expireDate: Date.now() },
+];
 
 const app = new Application();
 
@@ -56,14 +56,13 @@ async function ytdlVideo(
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp4";
-  const titleName = songtitle.replaceAll(/\.|\,|\/|\\/g, "") + ".mp4";
 
   if (await exists(fileName)) {
     _ctx.response.redirect(
-      new URL("./data/" + titleName, _ctx.request.url.origin)
+      new URL("./data/" + fileName, _ctx.request.url.origin)
     );
 
-    return await fileDeleteTimerRegister(fileName, titleName);
+    return await fileDeleteTimerRegister(fileName);
   }
 
   const yt = await ytdl(songurl, {
@@ -84,19 +83,11 @@ async function ytdlVideo(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  try {
-    await Deno.symlink(
-      new URL("./data/" + fileName, import.meta.url),
-      new URL("./data/" + titleName, import.meta.url),
-      { type: "file" }
-    );
-  } catch {}
-
   _ctx.response.redirect(
-    new URL("./data/" + titleName, _ctx.request.url.origin)
+    new URL("./data/" + fileName, _ctx.request.url.origin)
   );
 
-  return await fileDeleteTimerRegister(fileName, titleName);
+  return await fileDeleteTimerRegister(fileName);
 }
 async function ytdlMusic(
   songurl: string,
@@ -105,14 +96,13 @@ async function ytdlMusic(
   _ctx: Context<Record<string, any>, Record<string, any>>
 ) {
   const fileName = songid + ".mp3";
-  const titleName = songtitle.replaceAll(/\.|\,|\/|\\/g, "") + ".mp3";
 
   if (await exists(fileName)) {
     _ctx.response.redirect(
-      new URL("./data/" + titleName, _ctx.request.url.origin)
+      new URL("./data/" + fileName, _ctx.request.url.origin)
     );
 
-    return await fileDeleteTimerRegister(fileName, titleName);
+    return await fileDeleteTimerRegister(fileName);
   }
 
   const yt = await ytdl(songurl, {
@@ -133,19 +123,11 @@ async function ytdlMusic(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  try {
-    await Deno.symlink(
-      new URL("./data/" + fileName, import.meta.url),
-      new URL("./data/" + titleName, import.meta.url),
-      { type: "file" }
-    );
-  } catch {}
-
   _ctx.response.redirect(
-    new URL("./data/" + titleName, _ctx.request.url.origin)
+    new URL("./data/" + fileName, _ctx.request.url.origin)
   );
 
-  return await fileDeleteTimerRegister(fileName, titleName);
+  return await fileDeleteTimerRegister(fileName);
 }
 
 async function exists(fileName: string) {
@@ -159,7 +141,7 @@ async function exists(fileName: string) {
   }
 }
 
-async function fileDeleteTimerRegister(fileName: string, titleName: string) {
+async function fileDeleteTimerRegister(fileName: string) {
   for (const i in fileDeleteTimer) {
     if (fileDeleteTimer[i].fileName === fileName)
       return (fileDeleteTimer[i].expireDate = Date.now() + 1000 * 60 * 30);
@@ -167,7 +149,6 @@ async function fileDeleteTimerRegister(fileName: string, titleName: string) {
 
   fileDeleteTimer.push({
     fileName: fileName,
-    titleName: titleName,
     expireDate: Date.now() + 1000 * 60 * 30,
   });
 }
