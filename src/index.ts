@@ -84,11 +84,13 @@ async function ytdlVideo(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  await Deno.symlink(
-    new URL("./data/" + fileName, import.meta.url),
-    new URL("./data/" + titleName, import.meta.url),
-    { type: "file" }
-  );
+  try {
+    await Deno.symlink(
+      new URL("./data/" + fileName, import.meta.url),
+      new URL("./data/" + titleName, import.meta.url),
+      { type: "file" }
+    );
+  } catch {}
 
   _ctx.response.redirect(
     new URL("./data/" + titleName, _ctx.request.url.origin)
@@ -131,11 +133,13 @@ async function ytdlMusic(
     new Uint8Array(await blob.arrayBuffer())
   );
 
-  await Deno.symlink(
-    new URL("./data/" + fileName, import.meta.url),
-    new URL("./data/" + titleName, import.meta.url),
-    { type: "file" }
-  );
+  try {
+    await Deno.symlink(
+      new URL("./data/" + fileName, import.meta.url),
+      new URL("./data/" + titleName, import.meta.url),
+      { type: "file" }
+    );
+  } catch {}
 
   _ctx.response.redirect(
     new URL("./data/" + titleName, _ctx.request.url.origin)
