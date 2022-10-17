@@ -22,7 +22,7 @@ app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
 
   if (path.startsWith("/data/")) return;
 
-  if (path === "/")
+  if (path === "/" || !path)
     return (_ctx.response.body = `Hello\n/<title>.mp4\n/<title>.mp3`);
 
   const title = path.slice(1, -4);
