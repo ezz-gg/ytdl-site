@@ -1,6 +1,6 @@
 # Deno製 YtdlApi(?)
 
-## DemoSite(普通に使えるお)：https://ytdlol.nerusaba.net/
+## DemoSite(普通に使えるお)：https://player.nerusaba.net/
 
 ## ApiPaths
 
