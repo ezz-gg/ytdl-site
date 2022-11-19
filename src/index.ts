@@ -1,68 +1,81 @@
-import { Application, Context } from "https://deno.land/x/oak@v11.1.0/mod.ts";
-import staticFiles from "https://deno.land/x/static_files@1.1.6/mod.ts";
+import { serve } from "https://deno.land/std@0.165.0/http/server.ts";
+import { Context, Hono } from "https://deno.land/x/hono@v2.5.2/mod.ts";
+import {
+  logger,
+  serveStatic,
+} from "https://deno.land/x/hono@v2.5.2/middleware.ts";
 import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
 import { sleep } from "https://deno.land/x/sleep@v1.2.1/mod.ts";
+import { Environment } from "https://deno.land/x/hono@v2.5.2/types.ts";
+import { Schema } from "https://deno.land/x/hono@v2.5.2/validator/schema.ts";
 
+const port = Number(Deno.env.get("PORT")) || 49152;
+
+// deno-lint-ignore prefer-const
 let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
   { fileName: "start", expireDate: Date.now() },
 ];
 
-const app = new Application();
+const app = new Hono();
 
-app.use(
-  staticFiles("src/data", {
-    prefix: "/data",
-    redirect: true,
-  })
-);
+app.use("*", logger());
 
-app.use(async (_ctx: Context<Record<string, any>, Record<string, any>>) => {
-  const path = _ctx.request.url.pathname;
+app.use("/data/*", serveStatic({ root: "./src" }));
 
-  if (path.startsWith("/data/")) return;
+app.get("/", (c: Context<string, Environment, Schema>) => {
+  return c.body("Hello\n/<title>.mp4\n/<title>.mp3", 200, {
+    "content-type": "text/plain",
+  });
+});
 
-  if (path === "/" || !path)
-    return (_ctx.response.body = `Hello\n/<title>.mp4\n/<title>.mp3`);
+app.get("/:title", async (c: Context<string, Environment, Schema>) => {
+  const path: string = c.req.param("title");
 
-  const title = path.slice(1, -4);
+  const title = path.slice(0, -4);
 
   const song = await ytsr.searchOne(decodeURI(title), "video", false);
 
-  if (!song) return (_ctx.response.body = "検索結果がありません");
+  if (!song) return c.body("検索結果がありません", 200, { "content-type": "text/html" });
 
-  if (path.endsWith(".mp4"))
+  if (path.endsWith(".mp4")) {
     return await ytdlVideo(
       song.url || "",
       song.title || "",
       song.id || "",
-      _ctx
+      c,
     );
-  if (path.endsWith(".mp3"))
+  }
+
+  if (path.endsWith(".mp3")) {
     return await ytdlMusic(
       song.url || "",
       song.title || "",
       song.id || "",
-      _ctx
+      c,
     );
-
-  return (_ctx.response.body = "何かがおかしいんだお");
+  }
 });
 
 async function ytdlVideo(
   songurl: string,
-  songtitle: string,
+  _songtitle: string,
   songid: string,
-  _ctx: Context<Record<string, any>, Record<string, any>>
+  c: Context<string, Environment, Schema>,
 ) {
   const fileName = songid + ".mp4";
 
   if (await exists(fileName)) {
-    _ctx.response.redirect(
-      new URL("./data/" + fileName, _ctx.request.url.origin)
-    );
+    fileDeleteTimerRegister(fileName);
 
-    return await fileDeleteTimerRegister(fileName);
+    const file =
+      await (await fetch(new URL("./data/" + fileName, import.meta.url)))
+        .arrayBuffer();
+    return c.body(
+      file,
+      200,
+      { "content-type": "video/mp4" },
+    );
   }
 
   const yt = await ytdl(songurl, {
@@ -78,31 +91,45 @@ async function ytdlVideo(
 
   const blob = new Blob(chunks);
 
+  // deno-lint-ignore no-unused-vars
   const ok = await Deno.writeFile(
     new URL("./data/" + fileName, import.meta.url),
-    new Uint8Array(await blob.arrayBuffer())
+    new Uint8Array(await blob.arrayBuffer()),
   );
 
-  _ctx.response.redirect(
-    new URL("./data/" + fileName, _ctx.request.url.origin)
-  );
+  fileDeleteTimerRegister(fileName);
 
-  return await fileDeleteTimerRegister(fileName);
+  const file =
+    await (await fetch(new URL("./data/" + fileName, import.meta.url)))
+      .arrayBuffer();
+
+  return c.body(
+    file,
+    200,
+    { "content-type": "video/mp4" },
+  );
 }
+
 async function ytdlMusic(
   songurl: string,
-  songtitle: string,
+  _songtitle: string,
   songid: string,
-  _ctx: Context<Record<string, any>, Record<string, any>>
+  c: Context<string, Environment, Schema>,
 ) {
   const fileName = songid + ".mp3";
 
   if (await exists(fileName)) {
-    _ctx.response.redirect(
-      new URL("./data/" + fileName, _ctx.request.url.origin)
-    );
+    fileDeleteTimerRegister(fileName);
 
-    return await fileDeleteTimerRegister(fileName);
+    const file =
+      await (await fetch(new URL("./data/" + fileName, import.meta.url)))
+        .arrayBuffer();
+
+    return c.body(
+      file,
+      200,
+      { "content-type": "audio/mpeg" },
+    );
   }
 
   const yt = await ytdl(songurl, {
@@ -118,22 +145,29 @@ async function ytdlMusic(
 
   const blob = new Blob(chunks);
 
+  // deno-lint-ignore no-unused-vars
   const ok = await Deno.writeFile(
     new URL("./data/" + fileName, import.meta.url),
-    new Uint8Array(await blob.arrayBuffer())
+    new Uint8Array(await blob.arrayBuffer()),
   );
 
-  _ctx.response.redirect(
-    new URL("./data/" + fileName, _ctx.request.url.origin)
-  );
+  fileDeleteTimerRegister(fileName);
 
-  return await fileDeleteTimerRegister(fileName);
+  const file =
+    await (await fetch(new URL("./data/" + fileName, import.meta.url)))
+      .arrayBuffer();
+
+  return c.body(
+    file,
+    200,
+    { "content-type": "audio/mpeg" },
+  );
 }
 
 async function exists(fileName: string) {
   try {
     const file = await Deno.stat(
-      new URL("./data/" + fileName, import.meta.url)
+      new URL("./data/" + fileName, import.meta.url),
     );
     return file.isFile;
   } catch {
@@ -141,10 +175,11 @@ async function exists(fileName: string) {
   }
 }
 
-async function fileDeleteTimerRegister(fileName: string) {
+function fileDeleteTimerRegister(fileName: string) {
   for (const i in fileDeleteTimer) {
-    if (fileDeleteTimer[i].fileName === fileName)
+    if (fileDeleteTimer[i].fileName === fileName) {
       return (fileDeleteTimer[i].expireDate = Date.now() + 1000 * 60 * 30);
+    }
   }
 
   fileDeleteTimer.push({
@@ -158,12 +193,8 @@ async function fileDeleteTimerLoop() {
     if (fileDeleteTimer[i].expireDate <= Date.now()) {
       if (fileDeleteTimer[i].fileName !== "start") {
         await Deno.remove(
-          new URL("./data/" + fileDeleteTimer[i].fileName, import.meta.url)
+          new URL("./data/" + fileDeleteTimer[i].fileName, import.meta.url),
         );
-        await Deno.remove(
-          new URL("./data/" + fileDeleteTimer[i].titleName, import.meta.url)
-        );
-      } else {
       }
 
       delete fileDeleteTimer[i];
@@ -183,8 +214,4 @@ for await (const i of Deno.readDir(new URL("./data", import.meta.url))) {
   await Deno.remove(new URL("./data/" + i.name, import.meta.url));
 }
 
-const port = Number(Deno.env.get("PORT")) || 49152;
-
-console.log("ready http://0.0.0.0:" + port + "/");
-
-await app.listen({ port: port });
+serve(app.fetch, { hostname: "0.0.0.0", port: port });
