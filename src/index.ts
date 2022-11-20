@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.165.0/http/server.ts";
 import { Context, Hono } from "https://deno.land/x/hono@v2.5.2/mod.ts";
 import {
   logger,
-  serveStatic,
 } from "https://deno.land/x/hono@v2.5.2/middleware.ts";
 import ytsr from "https://deno.land/x/youtube_sr@v4.3.4-deno/mod.ts";
 import ytdl from "https://deno.land/x/ytdl_core@v0.1.1/mod.ts";
@@ -20,8 +19,6 @@ let fileDeleteTimer: [{ fileName: string; expireDate: number }] = [
 const app = new Hono();
 
 app.use("*", logger());
-
-app.use("/data/*", serveStatic({ root: "./src" }));
 
 app.get("/", (c: Context<string, Environment, Schema>) => {
   return c.body("Hello\n/<title>.mp4\n/<title>.mp3", 200, {
